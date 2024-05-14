@@ -1,6 +1,5 @@
-# easy breezy workflow
-### scripts and file structure for projects
-modified based on the breezy philosophy: github.com/benscarlson/breezy
+# wildlife mortality project
+structure modified based on the breezy philosophy: github.com/benscarlson/breezy
 
 ## file structure
 **project** folder: 
@@ -26,17 +25,5 @@ modified based on the breezy philosophy: github.com/benscarlson/breezy
 
 # README TEMPLATE
 ## goals:
-description...
-* goal 1
-
-## to do:
-* task 1
-
-## activity log:
-
-|date|activity|
-|:-|:------------|
-|2021-01-01|progress update|
-
-## notes
-* note 1
+* phase 1: develop algorithm to detect animal mortalities from GPS data
+* phase 2: apply algorithm and determine drivers of wildlife mortality
