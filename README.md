@@ -22,8 +22,6 @@ structure modified based on the breezy philosophy: github.com/benscarlson/breezy
 * Analysis outputs are stored in the analysis folder.
 * Any associated documents (drafts, notes) are stored in the docs folder
 
-
-# README TEMPLATE
 ## goals:
 * phase 1: develop algorithm to detect animal mortalities from GPS data
 * phase 2: apply algorithm and determine drivers of wildlife mortality
