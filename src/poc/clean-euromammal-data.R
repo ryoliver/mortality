@@ -8,6 +8,7 @@ library(here)
 ### read in animal metadata ###
 
 print("reading in data...")
+
 animals_lynx <- fread(here::here("data","lynx_animals.csv")) %>%
   mutate(mortality_code_new = rep(NA, n()))
 animals_red_deer <- fread(here::here("data","reddeer_animals.csv"))
