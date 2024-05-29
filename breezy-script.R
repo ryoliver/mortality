@@ -1,3 +1,4 @@
+# add test
 #!/usr/bin/env Rscript --vanilla
 # chmod 744 script_template.r #Use to make executable
 
