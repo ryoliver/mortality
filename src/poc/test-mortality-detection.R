@@ -53,12 +53,25 @@ animals_check <- left_join(animals_dead_withdate, gps_dead,
 # filter to animals within GPS record
 animals_dead_filtered <- animals_check %>%
   filter(mortality_date_gap <= 0) 
+
+# find step lengths
+gps <- gps %>%
+  filter(!is.na(acquisition_time)) %>%
+  filter(abs(latitude) < 90) %>%
+  filter(abs(longitude) < 180) %>%
+  arrange(animals_id_unique, acquisition_time) %>%
+  mutate(lag_longitude = dplyr::lag(longitude, 1),
+         lag_latitude = dplyr::lag(latitude, 1),
+         sl = distGeo(cbind(longitude,latitude), cbind(lag_longitude, lag_latitude)),
+         year = year(acquisition_time),
+         doy = day(acquisition_time)) 
   
 # print summary counts of individuals
 print(paste0("individuals total (n): ", nrow(animals)))
 print(paste0("individuals with known mortality (n): ", nrow(animals_dead)))
 print(paste0("individuals with known mortality date (n): ", nrow(animals_dead_withdate)))
 print(paste0("individuals with known mortality within GPS record (n): ", nrow(animals_dead_filtered)))
+
 
 
 ### detect mortality from GPS data ###
@@ -77,81 +90,104 @@ detect_dead_individuals <- function(gps_data, time_window, sl_threshold){
     filter(mean_sl < sl_threshold) 
   
   # find the number of false positives
-  false_positive <- length(setdiff(deads$animals_id_unique, animals_dead$animals_id_unique))
+  
+  species <- gps_data[1,]$common_name
+  
+  animals_dead_species <- animals_dead %>%
+    filter(common_name == species)
+  
+  false_positive <- length(setdiff(deads$animals_id_unique, animals_dead_species$animals_id_unique))
   
   # export results as data frame
   results <- data.frame(time_window = time_window,
                         sl_threshold = sl_threshold,
-                        n_dead = nrow(deads),
-                        false_positive = false_positive)
+                        n_dead_detected = nrow(deads),
+                        false_positive = false_positive) %>%
+            mutate(proportion_dead_detected_false_positive = false_positive/n_dead_detected,
+                   n_dead_true = rep(nrow(animals_dead_species),n()),
+                   false_negative = n_dead_true - n_dead_detected,
+                   proportion_dead_true_false_negative = false_negative/n_dead_true)
                 
   return(results)
 }
 
-# find step lengths
-gps <- gps %>%
-  filter(!is.na(acquisition_time)) %>%
-  filter(abs(latitude) < 90) %>%
-  filter(abs(longitude) < 180) %>%
-  arrange(animals_id_unique, acquisition_time) %>%
-  mutate(lag_longitude = dplyr::lag(longitude, 1),
-         lag_latitude = dplyr::lag(latitude, 1),
-         sl = distGeo(cbind(longitude,latitude), cbind(lag_longitude, lag_latitude)),
-         year = year(acquisition_time),
-         doy = day(acquisition_time)) 
+
+find_species_mortality <- function(gps_data, species){
+  
+  gps_species <- gps_data %>%
+    filter(common_name == species)
+  
+  test <- rbind(detect_dead_individuals(gps_species, 1, 10),
+                detect_dead_individuals(gps_species, 1, 20),
+                detect_dead_individuals(gps_species, 1, 30),
+                detect_dead_individuals(gps_species, 1, 40),
+                detect_dead_individuals(gps_species, 1, 50),
+                detect_dead_individuals(gps_species, 1, 60),
+                detect_dead_individuals(gps_species, 1, 70),
+                detect_dead_individuals(gps_species, 1, 80),
+                detect_dead_individuals(gps_species, 1, 90),
+                detect_dead_individuals(gps_species, 1, 100),
+                detect_dead_individuals(gps_species, 3, 10),
+                detect_dead_individuals(gps_species, 3, 20),
+                detect_dead_individuals(gps_species, 3, 30),
+                detect_dead_individuals(gps_species, 3, 40),
+                detect_dead_individuals(gps_species, 3, 50),
+                detect_dead_individuals(gps_species, 3, 60),
+                detect_dead_individuals(gps_species, 3, 70),
+                detect_dead_individuals(gps_species, 3, 80),
+                detect_dead_individuals(gps_species, 3, 90),
+                detect_dead_individuals(gps_species, 3, 100),
+                detect_dead_individuals(gps_species, 5, 10),
+                detect_dead_individuals(gps_species, 5, 20),
+                detect_dead_individuals(gps_species, 5, 30),
+                detect_dead_individuals(gps_species, 5, 40),
+                detect_dead_individuals(gps_species, 5, 50),
+                detect_dead_individuals(gps_species, 5, 60),
+                detect_dead_individuals(gps_species, 5, 70),
+                detect_dead_individuals(gps_species, 5, 80),
+                detect_dead_individuals(gps_species, 5, 90),
+                detect_dead_individuals(gps_species, 5, 100),
+                detect_dead_individuals(gps_species, 7, 10),
+                detect_dead_individuals(gps_species, 7, 20),
+                detect_dead_individuals(gps_species, 7, 30),
+                detect_dead_individuals(gps_species, 7, 40),
+                detect_dead_individuals(gps_species, 7, 50),
+                detect_dead_individuals(gps_species, 7, 60),
+                detect_dead_individuals(gps_species, 7, 70),
+                detect_dead_individuals(gps_species, 7, 80),
+                detect_dead_individuals(gps_species, 7, 90),
+                detect_dead_individuals(gps_species, 7, 100))
+  
+  
+  
+  results <- test %>%
+    mutate(common_name = rep(species, n()))
+  
+  return(results)
+}
 
 # detect mortality based on range of averaging windows and step length thresholds
 
 print("test morality detection...")
 
-test <- rbind(detect_dead_individuals(gps, 1, 10),
-              detect_dead_individuals(gps, 1, 20),
-              detect_dead_individuals(gps, 1, 30),
-              detect_dead_individuals(gps, 1, 40),
-              detect_dead_individuals(gps, 1, 50),
-              detect_dead_individuals(gps, 1, 60),
-              detect_dead_individuals(gps, 1, 70),
-              detect_dead_individuals(gps, 1, 80),
-              detect_dead_individuals(gps, 1, 90),
-              detect_dead_individuals(gps, 1, 100),
-              detect_dead_individuals(gps, 3, 10),
-              detect_dead_individuals(gps, 3, 20),
-              detect_dead_individuals(gps, 3, 30),
-              detect_dead_individuals(gps, 3, 40),
-              detect_dead_individuals(gps, 3, 50),
-              detect_dead_individuals(gps, 3, 60),
-              detect_dead_individuals(gps, 3, 70),
-              detect_dead_individuals(gps, 3, 80),
-              detect_dead_individuals(gps, 3, 90),
-              detect_dead_individuals(gps, 3, 100),
-              detect_dead_individuals(gps, 5, 10),
-              detect_dead_individuals(gps, 5, 20),
-              detect_dead_individuals(gps, 5, 30),
-              detect_dead_individuals(gps, 5, 40),
-              detect_dead_individuals(gps, 5, 50),
-              detect_dead_individuals(gps, 5, 60),
-              detect_dead_individuals(gps, 5, 70),
-              detect_dead_individuals(gps, 5, 80),
-              detect_dead_individuals(gps, 5, 90),
-              detect_dead_individuals(gps, 5, 100),
-              detect_dead_individuals(gps, 7, 10),
-              detect_dead_individuals(gps, 7, 20),
-              detect_dead_individuals(gps, 7, 30),
-              detect_dead_individuals(gps, 7, 40),
-              detect_dead_individuals(gps, 7, 50),
-              detect_dead_individuals(gps, 7, 60),
-              detect_dead_individuals(gps, 7, 70),
-              detect_dead_individuals(gps, 7, 80),
-              detect_dead_individuals(gps, 7, 90),
-              detect_dead_individuals(gps, 7, 100))
+test_mortality_lynx <- find_species_mortality(gps, "lynx")
+test_mortality_red_deer <- find_species_mortality(gps, "red deer")
+test_mortality_roe_deer <- find_species_mortality(gps, "roe deer")
+test_mortality_wild_boar <- find_species_mortality(gps, "wild boar")
+test_mortality_wildcat <- find_species_mortality(gps, "wildcat")
 
-# compute false positive and negative rates
-test <- test %>%
-  mutate(proportion_false_positive = false_positive/n_dead)
+test_mortality <- rbind(test_mortality_lynx,
+                        test_mortality_red_deer,
+                        test_mortality_roe_deer,
+                        test_mortality_wild_boar,
+                        test_mortality_wildcat)
+
 
 # plot results
-p1 <- ggplot(test) +
-  geom_point(aes(x = time_window, y = n_dead,
+ggplot(data = test_mortality) +
+  facet_grid(~common_name) +
+  geom_line(aes(x = time_window, y = n_dead_true)) +
+  geom_point(aes(x = time_window, y = n_dead_detected,
                  color = sl_threshold)) +
   scale_color_viridis_c() +
   labs(x = "Averaging window (days)",
@@ -159,8 +195,9 @@ p1 <- ggplot(test) +
        color = "Mean step length threshold") +
   theme(legend.position="bottom")
 
-p2 <- ggplot(test) +
-  geom_point(aes(x = time_window, y = proportion_false_positive*100,
+ggplot(data = test_mortality) +
+  facet_grid(~common_name) +
+  geom_point(aes(x = time_window, y = proportion_dead_detected_false_positive*100,
                  color = sl_threshold)) +
   scale_color_viridis_c() +
   labs(x = "Averaging window (days)",
@@ -169,8 +206,9 @@ p2 <- ggplot(test) +
   theme(legend.position="bottom")
 
 
-p3 <- ggplot(test) +
-  geom_point(aes(x = n_dead, y = proportion_false_positive*100,
+ggplot(test_mortality) +
+  facet_grid(~common_name) +
+  geom_point(aes(x = n_dead_detected, y = proportion_dead_detected_false_positive*100,
                  color = sl_threshold,
                  size = time_window),
              alpha = 0.5) +
