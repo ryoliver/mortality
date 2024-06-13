@@ -73,6 +73,7 @@ test <- gps %>%
   group_by(animals_id_unique) %>%
   filter(year == max(year, na.rm = T)) %>%
   filter(doy >= (max(doy, na.rm = T) - 7)) %>%
+  mutate(doy_relative = max(doy, na.rm = T) - doy) %>%
   ungroup()
 
 
@@ -85,7 +86,8 @@ ggplot(test) +
 
 ggplot(test) +
   facet_wrap(~common_name, scales = "free") +
-  geom_line(aes(x = acquisition_time, y = sl,
-                group = animals_id_unique,
-                colour = status))
+  geom_point(aes(x = doy_relative, y = sl,
+                colour = status),
+            alpha = 0.5) +
+  scale_y_log10()
   
