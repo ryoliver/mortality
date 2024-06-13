@@ -182,6 +182,8 @@ test_mortality <- rbind(test_mortality_lynx,
                         test_mortality_wild_boar,
                         test_mortality_wildcat)
 
+#---- Plot results ---#
+
 
 # plot results
 p1 <- ggplot(data = test_mortality) +
