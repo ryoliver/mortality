@@ -184,37 +184,45 @@ test_mortality <- rbind(test_mortality_lynx,
 
 
 # plot results
-ggplot(data = test_mortality) +
+p1 <- ggplot(data = test_mortality) +
   facet_grid(~common_name) +
   geom_line(aes(x = time_window, y = n_dead_true)) +
   geom_point(aes(x = time_window, y = n_dead_detected,
                  color = sl_threshold)) +
-  scale_color_viridis_c() +
+  scale_color_viridis_c(option = "magma") +
   labs(x = "Averaging window (days)",
        y = "Estimated dead (n)",
        color = "Mean step length threshold") +
-  theme(legend.position="bottom")
+  theme(legend.position="none")
 
-ggplot(data = test_mortality) +
+p2 <- ggplot(data = test_mortality) +
   facet_grid(~common_name) +
   geom_point(aes(x = time_window, y = proportion_dead_detected_false_positive*100,
                  color = sl_threshold)) +
-  scale_color_viridis_c() +
+  scale_color_viridis_c(option = "magma") +
   labs(x = "Averaging window (days)",
        y = "False positive (%)",
        color = "Mean step length threshold") +
-  theme(legend.position="bottom")
+  theme(legend.position="none")
 
-
-ggplot(test_mortality) +
+p3 <- ggplot(data = test_mortality) +
   facet_grid(~common_name) +
-  geom_point(aes(x = n_dead_detected, y = proportion_dead_detected_false_positive*100,
+  geom_point(aes(x = time_window, y = proportion_dead_true_false_negative*100,
+                 color = sl_threshold)) +
+  scale_color_viridis_c(option = "magma") +
+  labs(x = "Averaging window (days)",
+       y = "False negative (%)",
+       color = "Mean step length threshold") +
+  theme(legend.position="none")
+
+p4 <- ggplot(test_mortality) +
+  facet_grid(~common_name) +
+  geom_point(aes(x = proportion_dead_true_false_negative*100, y = proportion_dead_detected_false_positive*100,
                  color = sl_threshold,
                  size = time_window),
              alpha = 0.5) +
-  geom_vline(xintercept = nrow(animals_dead_filtered)) +
-  scale_color_viridis_c() +
-  labs(x = "Estimated dead (n)",
+  scale_color_viridis_c(option = "magma") +
+  labs(x = "False negative (%)",
        y = "False positive (%)",
        color = "Mean step length threshold",
        size = "Averaging window (days)") +
@@ -222,7 +230,7 @@ ggplot(test_mortality) +
 
 #---- Save output ---#
 
-p <- (p1 | p2)/(p3)
+p <- (p1)/(p2)/(p3)/(p4)
 
 ggsave(p, file = here::here("out","test-mortatlity-dection.pdf"),
-       width = 8, height = 8)
+       width = 10, height = 12)
