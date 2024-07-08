@@ -90,9 +90,11 @@ clean_animals_data <- function(animals_data, species_common_name){
            mortality_code_new,
            death_date,
            death_time) %>%
+    unite(death_date, death_date, death_time) %>%
     mutate(scientific_name = rep(scientific_name, n()),
            common_name = rep(species_common_name, n()),
-           animals_id_suffix = rep(suffix, n())) %>%
+           animals_id_suffix = rep(suffix, n()),
+           death_date = as_date(death_date)) %>%
     unite(animals_id_unique, animals_id, animals_id_suffix, sep = "-", remove = FALSE)
   
   return(animals_data_clean)
@@ -140,7 +142,7 @@ animals_clean_roe_deer_slovenia <- clean_animals_data(animals_roe_deer_slovenia,
 animals_clean_wild_boar <- clean_animals_data(animals_wild_boar, "wild boar")
 animals_clean_wildcat <- clean_animals_data(animals_wildcat, "wildcat")
 
-if (sum(test_animals$animals_id_unique %in% animals_clean_roe_deer$animals_id_unique) != 0) {
+if (sum(animals_clean_roe_deer_slovenia$animals_id_unique %in% animals_clean_roe_deer$animals_id_unique) != 0) {
   stop("non-unique animal IDs for roe deer")
 }
 
@@ -158,7 +160,7 @@ print("cleaning GPS data...")
 gps_clean_lynx <- clean_gps_data(gps_lynx, "lynx")
 gps_clean_red_deer <- clean_gps_data(gps_red_deer, "red deer") 
 gps_clean_roe_deer <- clean_gps_data(gps_roe_deer, "roe deer")
-gps_clean_roe_deer_slovenia <- clean_gpss_data(gpss_roe_deer_slovenia, "roe deer")
+gps_clean_roe_deer_slovenia <- clean_gps_data(gps_roe_deer_slovenia, "roe deer")
 gps_clean_wild_boar <- clean_gps_data(gps_wild_boar, "wild boar")
 gps_clean_wildcat <- clean_gps_data(gps_wildcat, "wildcat")
 
