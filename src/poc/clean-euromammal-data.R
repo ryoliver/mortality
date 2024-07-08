@@ -19,6 +19,9 @@ animals_red_deer <- fread(here::here("data","reddeer_animals.csv"))
 print("...roe deer")
 animals_roe_deer <- fread(here::here("data","roe_animals.csv"))
 
+print("...slovenian roe deer")
+animals_roe_deer_slovenia <- fread(here::here("data","Jelovica_Slovenia_ROEDEER_data","Animals_Jelovica_Slovenia.txt"))
+
 print("...wild boar")
 animals_wild_boar <- fread(here::here("data","wildboar_animals.csv"))
 
@@ -37,7 +40,10 @@ print("...red deer")
 gps_red_deer <- fread(here::here("data","reddeer_gps.csv")) 
 
 print("...roe deer")
-gps_roe_deer <- fread(here::here("data","roe_gps.csv")) 
+gps_roe_deer <- fread(here::here("data","roe_gps.csv"))
+
+print("...slovenian roe deer")
+gps_roe_deer_slovenia <- fread(here::here("data","Jelovica_Slovenia_ROEDEER_data","GPS_Jelovica_Slovenia.txt"))
 
 print("...wild boar")
 gps_wild_boar <- fread(here::here("data","wildboar_gps.csv")) 
@@ -129,13 +135,20 @@ print("cleaning animal metadata...")
 
 animals_clean_lynx <- clean_animals_data(animals_lynx, "lynx")
 animals_clean_red_deer <- clean_animals_data(animals_red_deer, "red deer") 
-animals_clean_roe_deer <- clean_animals_data(animals_roe_deer, "roe deer") 
+animals_clean_roe_deer <- clean_animals_data(animals_roe_deer, "roe deer")
+animals_clean_roe_deer_slovenia <- clean_animals_data(animals_roe_deer_slovenia, "roe deer")
 animals_clean_wild_boar <- clean_animals_data(animals_wild_boar, "wild boar")
 animals_clean_wildcat <- clean_animals_data(animals_wildcat, "wildcat")
+
+if (sum(test_animals$animals_id_unique %in% animals_clean_roe_deer$animals_id_unique) != 0) {
+  stop("non-unique animal IDs for roe deer")
+}
+
 
 animals_clean <- rbind(animals_clean_lynx,
                        animals_clean_red_deer,
                        animals_clean_roe_deer,
+                       animals_clean_roe_deer_slovenia,
                        animals_clean_wild_boar,
                        animals_clean_wildcat)
 
@@ -144,15 +157,30 @@ print("cleaning GPS data...")
 
 gps_clean_lynx <- clean_gps_data(gps_lynx, "lynx")
 gps_clean_red_deer <- clean_gps_data(gps_red_deer, "red deer") 
-gps_clean_roe_deer <- clean_gps_data(gps_roe_deer, "roe deer") 
+gps_clean_roe_deer <- clean_gps_data(gps_roe_deer, "roe deer")
+gps_clean_roe_deer_slovenia <- clean_gpss_data(gpss_roe_deer_slovenia, "roe deer")
 gps_clean_wild_boar <- clean_gps_data(gps_wild_boar, "wild boar")
 gps_clean_wildcat <- clean_gps_data(gps_wildcat, "wildcat")
 
 gps_clean <- rbind(gps_clean_lynx,
                    gps_clean_red_deer,
                    gps_clean_roe_deer,
+                   gps_clean_roe_deer_slovenia,
                    gps_clean_wild_boar,
                    gps_clean_wildcat)
+
+rm(gps_lynx,
+   gps_red_deer,
+   gps_roe_deer,
+   gps_roe_deer_slovenia,
+   gps_wild_boar,
+   gps_wildcat,
+   animals_lynx,
+   animals_red_deer,
+   animals_roe_deer,
+   animals_roe_deer_slovenia,
+   animals_wild_boar,
+   animals_wildcat)
 
 #---- Save output ---#
 
@@ -162,14 +190,14 @@ gps_clean <- rbind(gps_clean_lynx,
 if(n_distinct(animals_clean$animals_id_unique) == nrow(animals_clean)) {
   print("animal metadata: all rows unique")
 } else{
-  print("animal metadata: rows not unique")
+  stop("animal metadata: rows not unique")
 }
 
 # check that all GPS data has animal metadata
 if(length(setdiff(gps_clean$animals_id_unique, animals_clean$animals_id_unique)) == 0){
   print("gps data: no animals missing metadata")
 } else{
-  print(paste0("gps data: ",
+  stop(paste0("gps data: ",
                length(setdiff(gps_clean$animals_id_unique, animals_clean$animals_id_unique)),
                " missing metadata"))
 }
