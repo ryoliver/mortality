@@ -7,23 +7,42 @@ library(here)
 
 ### read in animal metadata ###
 
-print("reading in data...")
+print("reading in animal metadata...")
 
+print("...lynx")
 animals_lynx <- fread(here::here("data","lynx_animals.csv")) %>%
   mutate(mortality_code_new = rep(NA, n()))
+
+print("...red deer")
 animals_red_deer <- fread(here::here("data","reddeer_animals.csv"))
+
+print("...roe deer")
 animals_roe_deer <- fread(here::here("data","roe_animals.csv"))
+
+print("...wild boar")
 animals_wild_boar <- fread(here::here("data","wildboar_animals.csv"))
+
+print("...wild cat")
 animals_wildcat <- fread(here::here("data","wildcat_animals.csv")) %>%
   mutate(mortality_code_new = rep(NA, n()))
 
 
 ### read in GPS data ###
+print("reading in GPS data...")
 
+print("...lynx")
 gps_lynx <- fread(here::here("data","lynx_gps.csv")) 
+
+print("...red deer")
 gps_red_deer <- fread(here::here("data","reddeer_gps.csv")) 
+
+print("...roe deer")
 gps_roe_deer <- fread(here::here("data","roe_gps.csv")) 
+
+print("...wild boar")
 gps_wild_boar <- fread(here::here("data","wildboar_gps.csv")) 
+
+print("...wild cat")
 gps_wildcat <- fread(here::here("data","wildcat_gps.csv")) 
 
 ### species info ###
@@ -106,7 +125,7 @@ clean_gps_data <- function(gps_data, species_common_name){
 
 ### clean animal metadata to consistent format ###
 
-print("cleaning data...")
+print("cleaning animal metadata...")
 
 animals_clean_lynx <- clean_animals_data(animals_lynx, "lynx")
 animals_clean_red_deer <- clean_animals_data(animals_red_deer, "red deer") 
@@ -121,6 +140,7 @@ animals_clean <- rbind(animals_clean_lynx,
                        animals_clean_wildcat)
 
 ### clean GPS to consistent format ###
+print("cleaning GPS data...")
 
 gps_clean_lynx <- clean_gps_data(gps_lynx, "lynx")
 gps_clean_red_deer <- clean_gps_data(gps_red_deer, "red deer") 
@@ -158,8 +178,8 @@ if(length(setdiff(gps_clean$animals_id_unique, animals_clean$animals_id_unique))
 
 print("writing out cleaned data...")
 
-fwrite(animals_clean, here::here("analysis","animals_clean.csv"))
-fwrite(gps_clean, here::here("analysis","gps_clean.csv"))
+fwrite(animals_clean, here::here("analysis",paste0("animals_clean_",Sys.Date(),".csv")))
+fwrite(gps_clean, here::here("analysis",paste0("gps_clean_",Sys.Date(),".csv")))
 
 #---- Finalize script ----#
 print("done!")
