@@ -32,6 +32,8 @@ animals <- fread(here::here("analysis", animals_files$file_name)) %>%
 gps <- fread(here::here("analysis", gps_files$file_name)) %>%
   mutate(acquisition_time = as.POSIXct(acquisition_time))
 
+#---- Analysis ---#
+
 gps_final_location <- gps %>%
   arrange(animals_id_unique, desc(acquisition_time)) %>%
   group_by(animals_id_unique) %>%
@@ -46,17 +48,37 @@ animals_dead_with_date <- animals %>%
   left_join(., gps_final_location, by = c("animals_id_unique")) %>% # join with date of final location
   mutate(death_date = as.POSIXct(death_date),
          acquisition_date = lubridate::as_date(as.POSIXct(acquisition_time))) %>%
-  mutate(data_gap = difftime(death_date, acquisition_date, units = "days")) # find gap between locations and death date
+  mutate(data_gap = difftime(death_date, acquisition_date, units = "days")) %>% # find gap between locations and death date
+  filter(abs(data_gap) < 365)
+
+#---- Print data gap summary ---#
+
+p1 <- ggplot(data = animals_dead_with_date) +
+  facet_wrap(~ common_name, scales = "free") +
+  geom_histogram(aes(x = data_gap)) +
+  labs(x = "data gap (days)",
+       title = "Filtered to 1 year")
 
 
-# randomly select animals to plot
-animals_to_plot <- animals_dead_with_date %>%
-  sample_n(100)
+p2 <- ggplot(data = subset(animals_dead_with_date, 
+                     abs(data_gap) < 10)) +
+  facet_wrap(~ common_name, scales = "free") +
+  geom_histogram(aes(x = data_gap)) +
+  labs(x = "data gap (days)",
+       title = "Filtered to 10 days")
 
-for(i in 1:nrow(animals_to_plot)){
-  print(paste0(round(i/nrow(animals_to_plot)*100),"%"))
+p <- p1 / p2
+
+ggsave(here::here("out","plot-euromammal-data","summary-data-gap.pdf"), p)
+
+#---- Plotting function ---#
+
+plot_individual <- function(animal_to_plot, range){
   
-  animal_test <- animals_to_plot[i,] 
+  animal_test <- animal_to_plot %>%
+    mutate(death_time = "00:00:00") %>%
+    unite(death_time, death_date, death_time, sep = " ") %>%
+    mutate(death_time = as.POSIXct(death_time))
   
   gps_test <- gps %>%
     filter(animals_id_unique == animal_test$animals_id_unique) %>%
@@ -65,7 +87,7 @@ for(i in 1:nrow(animals_to_plot)){
            lag_latitude = dplyr::lag(latitude, 1),
            sl = distGeo(cbind(longitude,latitude), cbind(lag_longitude, lag_latitude)))
   
-  date_difference <- round(animal_test$death_time - gps_test[nrow(gps_test),]$acquisition_time, 0)
+  date_difference <- animal_test$data_gap
   
   p1 <- ggplot() +
     geom_line(aes(x = c(animal_test$death_time, animal_test$death_time), 
@@ -74,7 +96,6 @@ for(i in 1:nrow(animals_to_plot)){
               col = "#EF6F6C", lwd = 1) +
     geom_point(data = gps_test, aes(x = acquisition_time, y = latitude),
                col = "#7C73E8",alpha = 0.5) +
-    scale_x_datetime(date_breaks = "1 year", date_labels =  "%b %Y") +
     labs(x = " ", y = "latitude",
          title = paste0(animal_test$common_name,": ",animal_test$animals_id_unique),
          subtitle = paste0("data gap? ", date_difference, " days"))
@@ -86,7 +107,6 @@ for(i in 1:nrow(animals_to_plot)){
               col = "#EF6F6C", lwd = 1) +
     geom_point(data = gps_test, aes(x = acquisition_time, y = longitude),
                col = "#7C73E8",alpha = 0.5) +
-    scale_x_datetime(date_breaks = "1 year", date_labels =  "%b %Y") +
     labs(x = " ", y = "longitude")
   
   p3 <- ggplot() +
@@ -96,12 +116,44 @@ for(i in 1:nrow(animals_to_plot)){
               col = "#EF6F6C", lwd = 1) +
     geom_point(data = gps_test, aes(x = acquisition_time, y = sl),
                col = "#7C73E8",alpha = 0.5) +
-    scale_x_datetime(date_breaks = "1 year", date_labels =  "%b %Y") +
     labs(x = " ", y = "step length")
   
   p <- p1 / p2 / p3
   
-  ggsave(here::here("out","plot-euromammal-data","random-individuals",paste0(animal_test$animals_id_unique,".pdf")),
-         p)
+
+  if (range == "all"){
+    filepath <- here::here("out","plot-euromammal-data","random-individuals",
+                      paste0(animal_test$animals_id_unique,".pdf"))
+  }
+  if (range == "subset"){
+    filepath <- here::here("out","plot-euromammal-data","subset-individuals",
+                           paste0(animal_test$animals_id_unique,".pdf"))
+  }
+  
+  ggsave(filepath, p)
+}
+
+#---- Print random output ---#
+
+# randomly select animals to plot
+animals_to_plot_random <- animals_dead_with_date %>%
+  sample_n(100)
+
+for(i in 1:nrow(animals_to_plot)){
+  
+  print(paste0(round(i/nrow(animals_to_plot_random)*100),"%"))
+  plot_individual(animals_to_plot_random[i,], "all")
+  
+}
+
+#---- Print subset output ---#
+
+animals_dead_subset_window <- animals_dead_with_date %>%
+  filter(abs(data_gap) < 3)
+
+for(i in 1:nrow(animals_dead_subset_window)){
+
+  print(paste0(round(i/nrow(animals_dead_subset_window)*100),"%"))
+  plot_individual(animals_dead_subset_window[i,], "subset")
   
 }
