@@ -28,14 +28,26 @@ print(paste0("cleaned GPS data: ", gps_files$file_name))
 
 animals <- fread(here::here("analysis", animals_files$file_name)) %>%
   mutate(death_date = lubridate::date(death_date))
+
 gps <- fread(here::here("analysis", gps_files$file_name)) %>%
   mutate(acquisition_time = as.POSIXct(acquisition_time))
 
+gps_final_location <- gps %>%
+  arrange(animals_id_unique, desc(acquisition_time)) %>%
+  group_by(animals_id_unique) %>%
+  slice_head() %>%
+  select(animals_id_unique, acquisition_time)
 
-# filter to animals with GPS data and known death date
+
+# find gap between GPS data and death date
 animals_dead_with_date <- animals %>%
-  filter(!is.na(death_date)) %>%
-  filter(animals_id_unique %in% gps$animals_id_unique) 
+  filter(!is.na(death_date)) %>% # filter to animals with death date
+  filter(animals_id_unique %in% gps$animals_id_unique) %>% # filter to animals with GPS data
+  left_join(., gps_final_location, by = c("animals_id_unique")) %>% # join with date of final location
+  mutate(death_date = as.POSIXct(death_date),
+         acquisition_date = lubridate::as_date(as.POSIXct(acquisition_time))) %>%
+  mutate(data_gap = difftime(death_date, acquisition_date, units = "days")) # find gap between locations and death date
+
 
 # randomly select animals to plot
 animals_to_plot <- animals_dead_with_date %>%
@@ -43,10 +55,8 @@ animals_to_plot <- animals_dead_with_date %>%
 
 for(i in 1:nrow(animals_to_plot)){
   print(paste0(round(i/nrow(animals_to_plot)*100),"%"))
-  animal_test <- animals_to_plot[i,] %>%
-    mutate(death_time = "00:00:00") %>%
-    unite(death_time, death_date, death_time, sep = " ") %>%
-    mutate(death_time = as.POSIXct(death_time))
+  
+  animal_test <- animals_to_plot[i,] 
   
   gps_test <- gps %>%
     filter(animals_id_unique == animal_test$animals_id_unique) %>%
@@ -56,7 +66,6 @@ for(i in 1:nrow(animals_to_plot)){
            sl = distGeo(cbind(longitude,latitude), cbind(lag_longitude, lag_latitude)))
   
   date_difference <- round(animal_test$death_time - gps_test[nrow(gps_test),]$acquisition_time, 0)
-  
   
   p1 <- ggplot() +
     geom_line(aes(x = c(animal_test$death_time, animal_test$death_time), 
@@ -92,7 +101,7 @@ for(i in 1:nrow(animals_to_plot)){
   
   p <- p1 / p2 / p3
   
-  ggsave(here::here("out","plot-euromammal-data",paste0(animal_test$animals_id_unique,".pdf")),
+  ggsave(here::here("out","plot-euromammal-data","random-individuals",paste0(animal_test$animals_id_unique,".pdf")),
          p)
   
 }
