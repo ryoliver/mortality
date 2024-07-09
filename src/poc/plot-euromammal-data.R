@@ -6,6 +6,7 @@ library(geosphere)
 library(patchwork)
 library(sf)
 library(scales)
+library(gridE)
 
 #---- Load data ----#
 
@@ -29,17 +30,13 @@ print(paste0("cleaned GPS data: ", gps_files$file_name))
 animals <- fread(here::here("analysis", animals_files$file_name)) %>%
   mutate(death_date = lubridate::date(death_date))
 gps <- fread(here::here("analysis", gps_files$file_name)) %>%
-  mutate(acquisition_time = lubridate::date(acquisition_time))
+  mutate(acquisition_time = as.POSIXct(acquisition_time))
 
-# convert GPS data to sf object
-gps_sf <- gps %>%
-  st_as_sf(coords = c("longitude", "latitude"))
 
 # filter to animals with GPS data and known death date
 animals_dead_with_date <- animals %>%
   filter(!is.na(death_date)) %>%
-  filter(animals_id_unique %in% gps$animals_id_unique)
-
+  filter(animals_id_unique %in% gps$animals_id_unique) 
 
 
 # select animal to display
@@ -49,30 +46,47 @@ animal_test <- animals_dead_with_date[1,] %>%
   mutate(death_time = as.POSIXct(death_time))
 
 gps_test <- gps %>%
-  filter(animals_id_unique == animal_test$animals_id_unique) 
+  filter(animals_id_unique == animal_test$animals_id_unique) %>%
+  arrange(acquisition_time) %>%
+  mutate(lag_longitude = dplyr::lag(longitude, 1),
+         lag_latitude = dplyr::lag(latitude, 1),
+         sl = distGeo(cbind(longitude,latitude), cbind(lag_longitude, lag_latitude)))
 
-gps_test_sf <- gps %>%
-  filter(animals_id_unique == animal_test$animals_id_unique) 
+date_difference <- round(animal_test$death_time - gps_test[nrow(gps_test),]$acquisition_time, 0)
 
 
-ggplot() +
+p1 <- ggplot() +
   geom_line(aes(x = c(animal_test$death_time, animal_test$death_time), 
                  y = c(min(gps_test$latitude),
                        max(gps_test$latitude))), 
-            col = "black", lwd = 1) +
+            col = "#EF6F6C", lwd = 1) +
   geom_point(data = gps_test, aes(x = acquisition_time, y = latitude),
-             alpha = 0.5) +
+             col = "#7C73E8",alpha = 0.5) +
   scale_x_datetime(date_breaks = "1 month", date_labels =  "%b %Y") +
-  labs(x = " ", y = "Latitude")
+  labs(x = " ", y = "latitude",
+       title = paste0(animal_test$common_name,": ",animal_test$animals_id_unique),
+       subtitle = paste0("data gap? ", date_difference, " days"))
 
-ggplot() +
+p2 <- ggplot() +
   geom_line(aes(x = c(animal_test$death_time, animal_test$death_time), 
                 y = c(min(gps_test$longitude),
                       max(gps_test$longitude))), 
-            col = "black", lwd = 1) +
+            col = "#EF6F6C", lwd = 1) +
   geom_point(data = gps_test, aes(x = acquisition_time, y = longitude),
-             alpha = 0.5) +
+             col = "#7C73E8",alpha = 0.5) +
   scale_x_datetime(date_breaks = "1 month", date_labels =  "%b %Y") +
-  labs(x = " ", y = "Longitude")
+  labs(x = " ", y = "longitude")
 
+p3 <- ggplot() +
+  geom_line(aes(x = c(animal_test$death_time, animal_test$death_time), 
+                y = c(min(gps_test$sl, na.rm = TRUE),
+                      max(gps_test$sl, na.rm = TRUE))), 
+            col = "#EF6F6C", lwd = 1) +
+  geom_point(data = gps_test, aes(x = acquisition_time, y = sl),
+             col = "#7C73E8",alpha = 0.5) +
+  scale_x_datetime(date_breaks = "1 month", date_labels =  "%b %Y") +
+  labs(x = " ", y = "step length")
 
+p <- p1 / p2 / p3
+
+ggsave(here::here("out","plot-euromammal-data",paste0(animal_test$animals_id_unique,".pdf")),p)
