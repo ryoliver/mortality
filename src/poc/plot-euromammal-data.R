@@ -30,9 +30,7 @@ gps <- fread(here::here("analysis", gps_files$file_name))
 
 gps_test <- gps %>%
   mutate(longitude = as.numeric(longitude)) %>%
-  filter(is.na(longitude))
-
-%>%
+  filter(is.na(longitude))%>%
   st_as_sf(coords = c("longitude", "latitude"))
 
 # filter to animals with GPS data

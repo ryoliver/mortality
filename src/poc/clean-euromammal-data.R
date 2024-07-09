@@ -43,7 +43,9 @@ print("...roe deer")
 gps_roe_deer <- fread(here::here("data","roe_gps.csv"))
 
 print("...slovenian roe deer")
-gps_roe_deer_slovenia <- fread(here::here("data","Jelovica_Slovenia_ROEDEER_data","GPS_Jelovica_Slovenia.txt"))
+gps_roe_deer_slovenia <- fread(here::here("data","Jelovica_Slovenia_ROEDEER_data","GPS_Jelovica_Slovenia.txt")) %>%
+  mutate(latitude = as.numeric(latitude),
+         longitude = as.numeric(longitude))
 
 print("...wild boar")
 gps_wild_boar <- fread(here::here("data","wildboar_gps.csv")) 
