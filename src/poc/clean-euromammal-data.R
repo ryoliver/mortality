@@ -56,7 +56,7 @@ gps_wildcat <- fread(here::here("data","wildcat_gps.csv"))
 ### species info ###
 # - scientific name
 # - common name
-# - species suffix to append to animal IDs
+# - species prefix to append to animal IDs
 
 species_info <- data.frame(scientific_name = c("Lynx lynx",
                                                "Cervus elaphus",
@@ -68,7 +68,7 @@ species_info <- data.frame(scientific_name = c("Lynx lynx",
                                            "roe deer",
                                            "wild boar",
                                            "wildcat"),
-                           suffix = c("LX","RE","RO","WB","WC"))
+                           prefix = c("LX","RE","RO","WB","WC"))
 
 #---- Perform analysis ----#
 
@@ -81,7 +81,7 @@ clean_animals_data <- function(animals_data, species_common_name){
     filter(common_name == species_common_name)
   
   scientific_name <- sp$scientific_name
-  suffix <- sp$suffix
+  prefix <- sp$prefix
   
   animals_data_clean <- animals_data %>%
     select(animals_id, 
@@ -95,9 +95,9 @@ clean_animals_data <- function(animals_data, species_common_name){
     unite(death_date, death_date, death_time) %>%
     mutate(scientific_name = rep(scientific_name, n()),
            common_name = rep(species_common_name, n()),
-           animals_id_suffix = rep(suffix, n()),
+           animals_id_prefix = rep(prefix, n()),
            death_date = as_date(death_date)) %>%
-    unite(animals_id_unique, animals_id, animals_id_suffix, sep = "-", remove = FALSE)
+    unite(animals_id_unique, animals_id_prefix, animals_id, sep = "-", remove = FALSE)
   
   return(animals_data_clean)
 }
@@ -112,7 +112,7 @@ clean_gps_data <- function(gps_data, species_common_name){
     filter(common_name == species_common_name)
   
   scientific_name <- sp$scientific_name
-  suffix <- sp$suffix
+  prefix <- sp$prefix
   
   gps_clean <- gps_data %>%
     filter(dop < 5) %>%
@@ -126,8 +126,8 @@ clean_gps_data <- function(gps_data, species_common_name){
            dop) %>%
     mutate(scientific_name = rep(scientific_name, n()),
            common_name = rep(species_common_name, n()),
-           animals_id_suffix = rep(suffix, n())) %>%
-    unite(animals_id_unique, animals_id, animals_id_suffix, sep = "-", remove = FALSE)
+           animals_id_prefix = rep(prefix, n())) %>%
+    unite(animals_id_unique, animals_id_prefix, animals_id, sep = "-", remove = FALSE)
   
   return(gps_clean)
 }
