@@ -30,7 +30,9 @@ animals <- fread(here::here("analysis", animals_files$file_name)) %>%
   mutate(death_date = lubridate::date(death_date))
 
 gps <- fread(here::here("analysis", gps_files$file_name)) %>%
-  mutate(acquisition_time = as.POSIXct(acquisition_time))
+  mutate(acquisition_time = as.POSIXct(acquisition_time)) %>%
+  filter(abs(longitude) < 180) %>%
+  filter(abs(latitude) < 90)
 
 #---- Analysis ---#
 
