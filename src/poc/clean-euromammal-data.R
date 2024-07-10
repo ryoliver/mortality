@@ -2,6 +2,7 @@ rm(list = ls())
 library(tidyverse)
 library(data.table)
 library(here)
+library(geosphere)
 
 #---- Load data ----#
 
@@ -116,18 +117,45 @@ clean_gps_data <- function(gps_data, species_common_name){
   
   gps_clean <- gps_data %>%
     filter(dop < 5) %>%
-    filter(!is.na(latitude)) %>%
+    # filter NAs and error values
+    filter(!is.na(latitude)) %>% 
     filter(!is.na(longitude)) %>%
+    filter(abs(longitude) < 180) %>%
+    filter(abs(latitude) < 90) %>%
     select(animals_id,
            latitude, 
            longitude,
            acquisition_time, 
            gps_validity_code,
            dop) %>%
+    # add unique animal ID
     mutate(scientific_name = rep(scientific_name, n()),
            common_name = rep(species_common_name, n()),
            animals_id_prefix = rep(prefix, n())) %>%
-    unite(animals_id_unique, animals_id_prefix, animals_id, sep = "-", remove = FALSE)
+    unite(animals_id_unique, animals_id_prefix, animals_id, sep = "-", remove = FALSE) %>%
+    # find step length, turning angle, and bearing
+    arrange(animals_id_unique, acquisition_time) %>%
+    group_by(animals_id_unique) %>%
+    mutate(lag_longitude = dplyr::lag(longitude, 1),
+           lag_latitude = dplyr::lag(latitude, 1),
+           sl = distGeo(cbind(longitude,latitude), cbind(lag_longitude, lag_latitude)),
+           bearing = bearing(cbind(longitude,latitude), cbind(lag_longitude, lag_latitude)),
+           ta = 180-abs(180 - abs(bearing - dplyr::lag(bearing, 1)) %% 360))
+  
+  # calculate quantile-based cutoffs
+  cuts <- gps_clean %>% 
+    group_by(animals_id_unique) %>% 
+    summarize(
+      qta = quantile(ta, probs = 0.95, na.rm = T, names = F),
+      qsl = quantile(sl, probs = 0.95, na.rm = T, names = F)) 
+  
+  # filter outliers
+  gps_clean <- gps_clean %>% 
+    # join the cutpoints back to the dataset
+    left_join(., cuts, by = "animals_id_unique") %>% 
+    # conservative outlier threshold, must be past 95% quant for either sl and ta
+    filter(sl < qsl & ta < qta) %>% 
+    ungroup()
   
   return(gps_clean)
 }
@@ -209,6 +237,8 @@ if(length(setdiff(gps_clean$animals_id_unique, animals_clean$animals_id_unique))
 ### write out cleaned data ##
 
 print("writing out cleaned data...")
+
+print(paste0(round(nrow(gps_clean)/1000000,2), " million locations"))
 
 fwrite(animals_clean, here::here("analysis",paste0("animals_clean_",Sys.Date(),".csv")))
 fwrite(gps_clean, here::here("analysis",paste0("gps_clean_",Sys.Date(),".csv")))

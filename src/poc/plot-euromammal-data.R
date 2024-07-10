@@ -27,14 +27,12 @@ gps_files <- data.frame(file_name = list.files(here::here("analysis"), "gps_*"))
 print(paste0("cleaned animal metadata: ", animals_files$file_name))
 print(paste0("cleaned GPS data: ", gps_files$file_name))
 
-
+# load data
 animals <- fread(here::here("analysis", animals_files$file_name)) %>%
   mutate(death_date = lubridate::date(death_date))
 
 gps <- fread(here::here("analysis", gps_files$file_name)) %>%
-  mutate(acquisition_time = as.POSIXct(acquisition_time)) %>%
-  filter(abs(longitude) < 180) %>%
-  filter(abs(latitude) < 90)
+  mutate(acquisition_time = as.POSIXct(acquisition_time))
 
 #---- Analysis ---#
 
