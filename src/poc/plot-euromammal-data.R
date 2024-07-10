@@ -7,6 +7,8 @@ library(patchwork)
 library(sf)
 library(scales)
 
+source(here::here("src","funs","plot_individual_summary.R"))
+
 #---- Load data ----#
 
 ### read in animal and GPS data ###
@@ -73,67 +75,6 @@ p <- p1 / p2
 
 ggsave(here::here("out","plot-euromammal-data","summary-data-gap.pdf"), p)
 
-#---- Plotting function ---#
-
-plot_individual <- function(animal_to_plot, range){
-  
-  animal_test <- animal_to_plot %>%
-    mutate(death_time = "00:00:00") %>%
-    unite(death_time, death_date, death_time, sep = " ") %>%
-    mutate(death_time = as.POSIXct(death_time))
-  
-  gps_test <- gps %>%
-    filter(animals_id_unique == animal_test$animals_id_unique) %>%
-    arrange(acquisition_time) %>%
-    mutate(lag_longitude = dplyr::lag(longitude, 1),
-           lag_latitude = dplyr::lag(latitude, 1),
-           sl = distGeo(cbind(longitude,latitude), cbind(lag_longitude, lag_latitude)))
-  
-  date_difference <- animal_test$data_gap
-  
-  p1 <- ggplot() +
-    geom_line(aes(x = c(animal_test$death_time, animal_test$death_time), 
-                  y = c(min(gps_test$latitude),
-                        max(gps_test$latitude))), 
-              col = "#EF6F6C", lwd = 1) +
-    geom_point(data = gps_test, aes(x = acquisition_time, y = latitude),
-               col = "#7C73E8",alpha = 0.5) +
-    labs(x = " ", y = "latitude",
-         title = paste0(animal_test$common_name,": ",animal_test$animals_id_unique),
-         subtitle = paste0("data gap? ", date_difference, " days"))
-  
-  p2 <- ggplot() +
-    geom_line(aes(x = c(animal_test$death_time, animal_test$death_time), 
-                  y = c(min(gps_test$longitude),
-                        max(gps_test$longitude))), 
-              col = "#EF6F6C", lwd = 1) +
-    geom_point(data = gps_test, aes(x = acquisition_time, y = longitude),
-               col = "#7C73E8",alpha = 0.5) +
-    labs(x = " ", y = "longitude")
-  
-  p3 <- ggplot() +
-    geom_line(aes(x = c(animal_test$death_time, animal_test$death_time), 
-                  y = c(min(gps_test$sl, na.rm = TRUE),
-                        max(gps_test$sl, na.rm = TRUE))), 
-              col = "#EF6F6C", lwd = 1) +
-    geom_point(data = gps_test, aes(x = acquisition_time, y = sl),
-               col = "#7C73E8",alpha = 0.5) +
-    labs(x = " ", y = "step length")
-  
-  p <- p1 / p2 / p3
-  
-
-  if (range == "all"){
-    filepath <- here::here("out","plot-euromammal-data","random-individuals",
-                      paste0(animal_test$animals_id_unique,".pdf"))
-  }
-  if (range == "subset"){
-    filepath <- here::here("out","plot-euromammal-data","subset-individuals",
-                           paste0(animal_test$animals_id_unique,".pdf"))
-  }
-  
-  ggsave(filepath, p)
-}
 
 #---- Print random output ---#
 
@@ -144,18 +85,27 @@ animals_to_plot_random <- animals_dead_with_date %>%
 for(i in 1:nrow(animals_to_plot)){
   
   print(paste0(round(i/nrow(animals_to_plot_random)*100),"%"))
-  plot_individual(animals_to_plot_random[i,], "all")
   
+  filepath <- here::here("out","plot-euromammal-data","random-individuals",
+                         paste0(animal_test$animals_id_unique,".pdf"))
+  
+  plot_individual_summary(animals_to_plot_random[i,], gps, filepath)
 }
 
 #---- Print subset output ---#
 
+# select animals with less than a 3 day gap between GPS data and mortality
 animals_dead_subset_window <- animals_dead_with_date %>%
   filter(abs(data_gap) < 3)
 
 for(i in 1:nrow(animals_dead_subset_window)){
 
   print(paste0(round(i/nrow(animals_dead_subset_window)*100),"%"))
-  plot_individual(animals_dead_subset_window[i,], "subset")
   
+  filepath <- here::here("out","plot-euromammal-data","subset-individuals",
+                         paste0(animal_test$animals_id_unique,".pdf"))
+  
+  plot_individual_summary(animals_dead_subset_window[i,], gps, filepath)
 }
+
+print("done!")
