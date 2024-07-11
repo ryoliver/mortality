@@ -12,7 +12,35 @@ print("reading in animal metadata...")
 
 print("...lynx")
 animals_lynx <- fread(here::here("data","lynx_animals.csv")) %>%
-  mutate(mortality_code_new = rep(NA, n()))
+  mutate(mortality_code_new = rep(NA, n())) %>%
+  mutate(mortality_code_new = case_when(mortality_code == "0" ~ "0",
+                                        mortality_code == "1" ~ "11",
+                                        mortality_code == "2" ~ "12",
+                                        mortality_code == "3" ~ "1",
+                                        mortality_code == "4" ~ "31",
+                                        mortality_code == "5" ~ "2",
+                                        mortality_code == "6" ~ "7",
+                                        mortality_code == "7" ~ "9",
+                                        mortality_code == "8" ~ "25",
+                                        mortality_code == "9" ~ "13",
+                                        mortality_code == "10" ~ "91",
+                                        mortality_code == "11" ~ "21",
+                                        mortality_code == "12" ~ NA,
+                                        mortality_code == "13" ~ "51",
+                                        mortality_code == "14" ~ "52",
+                                        mortality_code == "15" ~ "53",
+                                        mortality_code == "16" ~ "5",
+                                        mortality_code == "21" ~ "6102",
+                                        mortality_code == "22" ~ "6103",
+                                        mortality_code == "23" ~ "6104",
+                                        mortality_code == "24" ~ "6105",
+                                        mortality_code == "26" ~ "6",
+                                        mortality_code == "31" ~ "81",
+                                        mortality_code == "32" ~ "82",
+                                        mortality_code == "33" ~ "83",
+                                        mortality_code == "34" ~ "84",
+                                        mortality_code == "35" ~ "8",
+                                        mortality_code == "40" ~ "35"))
 
 print("...red deer")
 animals_red_deer <- fread(here::here("data","reddeer_animals.csv"))
@@ -24,7 +52,30 @@ print("...slovenian roe deer")
 animals_roe_deer_slovenia <- fread(here::here("data","Jelovica_Slovenia_ROEDEER_data","Animals_Jelovica_Slovenia.txt"))
 
 print("...wild boar")
-animals_wild_boar <- fread(here::here("data","wildboar_animals.csv"))
+animals_wild_boar <- fread(here::here("data","wildboar_animals.csv")) %>%
+  mutate(mortality_code_new = rep(NA, n())) %>%
+  mutate(mortality_code_new = case_when(mortality_code == "0" ~ "0",
+                                        mortality_code == "1" ~ "61",
+                                        mortality_code == "2" ~ "11",
+                                        mortality_code == "3" ~ "12",
+                                        mortality_code == "4" ~ "1",
+                                        mortality_code == "5" ~ "31",
+                                        mortality_code == "6" ~ "2",
+                                        mortality_code == "7" ~ "7",
+                                        mortality_code == "8" ~ "9",
+                                        mortality_code == "9" ~ "8",
+                                        mortality_code == "10" ~ "25",
+                                        mortality_code == "11" ~ "13",
+                                        mortality_code == "12" ~ "54",
+                                        mortality_code == "13" ~ "91",
+                                        mortality_code == "14" ~ "NA",
+                                        mortality_code == "15" ~ "5",
+                                        mortality_code == "21" ~ "6101",
+                                        mortality_code == "22" ~ "6102",
+                                        mortality_code == "23" ~ "6103",
+                                        mortality_code == "24" ~ "6104",
+                                        mortality_code == "25" ~ "6105",
+                                        mortality_code == "26" ~ "6106"))
 
 print("...wild cat")
 animals_wildcat <- fread(here::here("data","wildcat_animals.csv")) %>%
@@ -182,7 +233,12 @@ animals_clean <- rbind(animals_clean_lynx,
                        animals_clean_roe_deer,
                        animals_clean_roe_deer_slovenia,
                        animals_clean_wild_boar,
-                       animals_clean_wildcat)
+                       animals_clean_wildcat) %>%
+  mutate(mortality_code_new_level1 = substr(mortality_code_new, 1,1),
+         mortality_code_new_level2 = substr(mortality_code_new, 2,2),
+         mortality_code_new_level3 = substr(mortality_code_new, 3,3),
+         mortality_code_new_level4 = substr(mortality_code_new, 4,4),
+         mortality_code_new_n_levels = str_length(mortality_code_new)) 
 
 ### clean GPS to consistent format ###
 print("cleaning GPS data...")
