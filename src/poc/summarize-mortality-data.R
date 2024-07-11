@@ -12,6 +12,8 @@ print("reading in data...")
 
 print("reading in data...")
 
+mortality_codes <- read_delim(here::here("data","lu_mortality_new.txt"))
+
 # find most recent cleaned data
 animals_files <- data.frame(file_name = list.files(here::here("analysis"), "animals_*")) %>%
   arrange(desc(file_name)) %>%
@@ -41,8 +43,9 @@ animals_dead_withdate <- animals %>%
 
 
 ggplot() +
+  facet_wrap(~ common_name) +
   geom_bar(data = animals_dead_withdate,
-                 aes(x = mortality_code_new_level1))
+                 aes(x = as.character(mortality_code_new_level1)))
 
 
 
