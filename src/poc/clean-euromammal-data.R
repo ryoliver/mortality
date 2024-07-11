@@ -68,7 +68,7 @@ animals_wild_boar <- fread(here::here("data","wildboar_animals.csv")) %>%
                                         mortality_code == "11" ~ "13",
                                         mortality_code == "12" ~ "54",
                                         mortality_code == "13" ~ "91",
-                                        mortality_code == "14" ~ "NA",
+                                        mortality_code == "14" ~ NA,
                                         mortality_code == "15" ~ "5",
                                         mortality_code == "21" ~ "6101",
                                         mortality_code == "22" ~ "6102",
