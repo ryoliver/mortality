@@ -2,7 +2,6 @@ rm(list = ls())
 library(tidyverse)
 library(data.table)
 library(here)
-library(geosphere)
 library(patchwork)
 
 #---- Load data ----#
@@ -11,8 +10,26 @@ library(patchwork)
 
 print("reading in data...")
 
-animals <- fread(here::here("analysis","animals_clean.csv"))
-gps <- fread(here::here("analysis","gps_clean.csv"))
+print("reading in data...")
+
+# find most recent cleaned data
+animals_files <- data.frame(file_name = list.files(here::here("analysis"), "animals_*")) %>%
+  arrange(desc(file_name)) %>%
+  slice(1)
+
+gps_files <- data.frame(file_name = list.files(here::here("analysis"), "gps_*")) %>%
+  arrange(desc(file_name)) %>%
+  slice(1)
+
+print(paste0("cleaned animal metadata: ", animals_files$file_name))
+print(paste0("cleaned GPS data: ", gps_files$file_name))
+
+# load data
+animals <- fread(here::here("analysis", animals_files$file_name)) %>%
+  mutate(death_date = lubridate::date(death_date))
+
+gps <- fread(here::here("analysis", gps_files$file_name)) %>%
+  mutate(acquisition_time = as.POSIXct(acquisition_time))
 
 # filter to animals with GPS data
 animals <- animals %>%
@@ -20,8 +37,17 @@ animals <- animals %>%
 
 # animals with known death date
 animals_dead_withdate <- animals %>%
-  filter(mortality_code > 0) %>%
   filter(!is.na(death_date)) 
+
+
+ggplot() +
+  geom_bar(data = animals_dead_withdate,
+                 aes(x = mortality_code_new_level1))
+
+
+
+animals_dead_withdate %>%
+  filter(mortality_code_new_level1 == "N")
 
 # find date of last GPS signal for animals with known mortality
 gps_dead <- gps %>%
