@@ -6,13 +6,18 @@ library(patchwork)
 
 #---- Load data ----#
 
+lu_mortality_lynx <- read_delim(here::here("data", "lu_mortality_lynx.txt"))
+lu_mortality_wildboar <- read_delim(here::here("data", "lu_mortality_wildboar.txt"))
+
+mortality_codes <- read_delim(here::here("data","lu_mortality_new.txt"))
+
+
 ### read in animal and GPS data ###
 
 print("reading in data...")
 
 print("reading in data...")
 
-mortality_codes <- read_delim(here::here("data","lu_mortality_new.txt"))
 
 # find most recent cleaned data
 animals_files <- data.frame(file_name = list.files(here::here("analysis"), "animals_*")) %>%
@@ -41,6 +46,8 @@ animals <- animals %>%
 animals_dead_withdate <- animals %>%
   filter(!is.na(death_date)) 
 
+animals_dead_withdate %>%
+  filter(mortality_code_new == "0")
 
 ggplot() +
   facet_wrap(~ common_name) +
