@@ -25,7 +25,7 @@ animals_lynx <- fread(here::here("data","lynx_animals.csv")) %>%
                                         mortality_code == "9" ~ "13",
                                         mortality_code == "10" ~ "91",
                                         mortality_code == "11" ~ "21",
-                                        mortality_code == "12" ~ NA,
+                                        mortality_code == "12" ~ "9",
                                         mortality_code == "13" ~ "51",
                                         mortality_code == "14" ~ "52",
                                         mortality_code == "15" ~ "53",
@@ -68,7 +68,7 @@ animals_wild_boar <- fread(here::here("data","wildboar_animals.csv")) %>%
                                         mortality_code == "11" ~ "13",
                                         mortality_code == "12" ~ "54",
                                         mortality_code == "13" ~ "91",
-                                        mortality_code == "14" ~ NA,
+                                        mortality_code == "14" ~ "9",
                                         mortality_code == "15" ~ "5",
                                         mortality_code == "21" ~ "6101",
                                         mortality_code == "22" ~ "6102",
@@ -79,7 +79,9 @@ animals_wild_boar <- fread(here::here("data","wildboar_animals.csv")) %>%
 
 print("...wild cat")
 animals_wildcat <- fread(here::here("data","wildcat_animals.csv")) %>%
-  mutate(mortality_code_new = rep(NA, n()))
+  mutate(mortality_code_new = rep(NA, n())) %>%
+  mutate(mortality_code_new = case_when(mortality_code == "0" ~ "0",
+                                        mortality_code != "0" ~ "9"))
 
 
 ### read in GPS data ###
@@ -95,9 +97,11 @@ print("...roe deer")
 gps_roe_deer <- fread(here::here("data","roe_gps.csv"))
 
 print("...slovenian roe deer")
+suppressWarnings(
 gps_roe_deer_slovenia <- fread(here::here("data","Jelovica_Slovenia_ROEDEER_data","GPS_Jelovica_Slovenia.txt")) %>%
   mutate(latitude = as.numeric(latitude),
          longitude = as.numeric(longitude))
+)
 
 print("...wild boar")
 gps_wild_boar <- fread(here::here("data","wildboar_gps.csv")) 
@@ -216,12 +220,24 @@ clean_gps_data <- function(gps_data, species_common_name){
 
 print("cleaning animal metadata...")
 
+suppressWarnings(
 animals_clean_lynx <- clean_animals_data(animals_lynx, "lynx")
-animals_clean_red_deer <- clean_animals_data(animals_red_deer, "red deer") 
+)
+suppressWarnings(
+animals_clean_red_deer <- clean_animals_data(animals_red_deer, "red deer")
+)
+suppressWarnings(
 animals_clean_roe_deer <- clean_animals_data(animals_roe_deer, "roe deer")
+)
+suppressWarnings(
 animals_clean_roe_deer_slovenia <- clean_animals_data(animals_roe_deer_slovenia, "roe deer")
+)
+suppressWarnings(
 animals_clean_wild_boar <- clean_animals_data(animals_wild_boar, "wild boar")
+)
+suppressWarnings(
 animals_clean_wildcat <- clean_animals_data(animals_wildcat, "wildcat")
+)
 
 if (sum(animals_clean_roe_deer_slovenia$animals_id_unique %in% animals_clean_roe_deer$animals_id_unique) != 0) {
   stop("non-unique animal IDs for roe deer")
@@ -238,7 +254,8 @@ animals_clean <- rbind(animals_clean_lynx,
          mortality_code_new_level2 = substr(mortality_code_new, 2,2),
          mortality_code_new_level3 = substr(mortality_code_new, 3,3),
          mortality_code_new_level4 = substr(mortality_code_new, 4,4),
-         mortality_code_new_n_levels = str_length(mortality_code_new)) 
+         mortality_code_new_n_levels = str_length(mortality_code_new)) %>%
+  select(-mortality_code)
 
 ### clean GPS to consistent format ###
 print("cleaning GPS data...")
@@ -257,6 +274,11 @@ gps_clean <- rbind(gps_clean_lynx,
                    gps_clean_wild_boar,
                    gps_clean_wildcat)
 
+# remove any GPS data without animal metadata
+gps_clean <- gps_clean %>%
+  filter(animals_id_unique %in% animals_clean$animals_id_unique)
+
+### clear variables
 rm(gps_lynx,
    gps_red_deer,
    gps_roe_deer,
@@ -269,6 +291,59 @@ rm(gps_lynx,
    animals_roe_deer_slovenia,
    animals_wild_boar,
    animals_wildcat)
+
+rm(gps_clean_lynx,
+   gps_clean_red_deer,
+   gps_clean_roe_deer,
+   gps_clean_roe_deer_slovenia,
+   gps_clean_wild_boar,
+   gps_clean_wildcat,
+   animals_clean_lynx,
+   animals_clean_red_deer,
+   animals_clean_roe_deer,
+   animals_clean_roe_deer_slovenia,
+   animals_clean_wild_boar,
+   animals_clean_wildcat)
+
+### add date of final GPS location to animal metadata
+
+# find date of final GPS location
+gps_final_location <- gps_clean %>%
+  arrange(animals_id_unique, desc(acquisition_time)) %>%
+  group_by(animals_id_unique) %>%
+  slice_head() %>%
+  select(animals_id_unique, acquisition_time) %>%
+  rename(final_gps_location_datetime = acquisition_time) %>%
+  mutate(final_gps_location_date = date(final_gps_location_datetime))
+
+# link date of final GPS location to animal metadata
+animals_clean <- animals_clean %>%
+  filter(animals_id_unique %in% gps_clean$animals_id_unique) %>%
+  left_join(., gps_final_location, by = "animals_id_unique") %>%
+  # find gap between final GPS location and death date
+  mutate(gap_death_gps_date = difftime(death_date, final_gps_location_date, units = "days")) %>%
+  select(animals_id_unique, scientific_name, common_name,
+         sex, year_birth, year_birth_exact,
+         mortality_code_new, mortality_code_new_level1, 
+         mortality_code_new_level2, mortality_code_new_level3,
+         mortality_code_new_level4, mortality_code_new_n_levels,
+         death_date, final_gps_location_datetime, final_gps_location_date, gap_death_gps_date)
+
+### filter animals with possible errors in mortality information
+
+# find animals with mortality code 0 (alive), but with a death date
+animals_filtered <- animals_clean %>%
+  filter(mortality_code_new == "0") %>%
+  filter(!is.na(death_date))
+  
+fwrite(animals_filtered, here::here("analysis",paste0("animals_filtered_",Sys.Date(),".csv")))
+
+animals_clean <- animals_clean %>%
+  filter(!animals_id_unique %in% animals_filtered$animals_id_unique)
+
+gps_clean <- gps_clean %>%
+  filter(!animals_id_unique %in% animals_filtered$animals_id_unique)
+  
 
 #---- Save output ---#
 
