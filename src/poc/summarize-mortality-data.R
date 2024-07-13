@@ -3,24 +3,17 @@ library(tidyverse)
 library(data.table)
 library(here)
 library(patchwork)
+library(ggpubr)
+
 
 #---- Load data ----#
-
-lu_mortality_lynx <- read_delim(here::here("data", "lu_mortality_lynx.txt"))
-lu_mortality_wildboar <- read_delim(here::here("data", "lu_mortality_wildboar.txt"))
-
-mortality_codes <- read_delim(here::here("data","lu_mortality_new.txt"))
-
 
 ### read in animal and GPS data ###
 
 print("reading in data...")
 
-print("reading in data...")
-
-
 # find most recent cleaned data
-animals_files <- data.frame(file_name = list.files(here::here("analysis"), "animals_*")) %>%
+animals_files <- data.frame(file_name = list.files(here::here("analysis"), "animals_clean_*")) %>%
   arrange(desc(file_name)) %>%
   slice(1)
 
@@ -35,12 +28,108 @@ print(paste0("cleaned GPS data: ", gps_files$file_name))
 animals <- fread(here::here("analysis", animals_files$file_name)) %>%
   mutate(death_date = lubridate::date(death_date))
 
+mortality_codes <- read_delim(here::here("data","lu_mortality_new.txt"))
+
+n_alive <- animals %>%
+  filter(mortality_code_new == 0) %>%
+  nrow()
+
+n_dead <- animals %>%
+  filter(mortality_code_new > 0) %>%
+  nrow()
+
+n_dead_death_date <- animals %>%
+  filter(mortality_code_new > 0) %>%
+  filter(!is.na(death_date)) %>%
+  nrow()
+
+n_dead_no_date <- animals %>%
+  filter(mortality_code_new > 0) %>%
+  filter(is.na(death_date)) %>%
+  nrow()
+
+summary_individuals <- data.frame(status = c("alive",
+                 "dead",
+                 "dead with date",
+                 "dead without date",
+                 "total"),
+           n_individuals = c(n_alive, n_dead, n_dead_death_date, n_dead_no_date, nrow(animals)))
+
+
+
+p1 <- ggplot(data = animals) +
+  facet_wrap(~ common_name, ncol = 1, scales = "free_y") +
+  geom_bar(aes(x = as.character(mortality_code_new_level1),
+               fill = as.character(mortality_code_new_level1))) +
+  scale_fill_manual(values = c("#020887","#647AA3","#7A9CC6",
+                               "#B3D2B2","#BDE4A7","#FFFD98",
+                               "#FFE19C","#FEB95F","#FFD0C2","#FF784F"
+                               )) +
+  theme(legend.position = "none") +
+  labs(x = "", y = "Individuals (n)",
+       title = "All individuals")
+
+p2 <- ggplot(data = subset(animals, !is.na(death_date))) +
+  facet_wrap(~ common_name, ncol = 1, scales = "free_y") +
+  geom_bar(aes(x = as.character(mortality_code_new_level1),
+               fill = as.character(mortality_code_new_level1))) +
+  scale_fill_manual(values = c("#647AA3","#7A9CC6",
+                               "#B3D2B2","#BDE4A7","#FFFD98",
+                               "#FFE19C","#FEB95F","#FFD0C2","#FF784F"
+  )) +
+  theme(legend.position = "none",
+        axis.title.y = element_blank()) +
+  labs(x = "", y = "Individuals (n)",
+       title = "Individuals with death date")
+
+p3 <- ggplot(data = subset(animals, mortality_code_new_level1 > 0 &
+                       is.na(death_date))) +
+  facet_wrap(~ common_name, ncol = 1, scales = "free_y") +
+  geom_bar(aes(x = as.character(mortality_code_new_level1),
+               fill = as.character(mortality_code_new_level1))) +
+  scale_fill_manual(values = c("#647AA3","#7A9CC6",
+                               "#B3D2B2","#BDE4A7",
+                               "#FFE19C","#FEB95F","#FFD0C2","#FF784F"
+  )) +
+  theme(legend.position = "none",
+        axis.title.y = element_blank()) +
+  labs(x = "", 
+       title = "Individuals without death date")
+
+mortality_codes_table <- mortality_codes %>%
+  filter(mortality_code <= 9) %>%
+  select(mortality_code, mortality_name)
+
+mortality_codes_table[mortality_codes_table$mortality_code == 9,]$mortality_name <- "unknown death"
+
+t1 <- ggtexttable(summary_individuals, rows = NULL, 
+            cols = c("status", "individuals (n)"),
+            theme = ttheme("blank")) %>%
+  tab_add_hline(at.row = 1:2, row.side = "top", linewidth = 2) %>%
+  tab_add_hline(at.row = nrow(summary_individuals), 
+                row.side = "bottom", linewidth = 3, linetype = 1)
+
+t2 <- ggtexttable(mortality_codes_table,
+              rows = NULL, cols = c("code", "mortality status"),
+              theme = ttheme("blank")) %>%
+    tab_add_hline(at.row = 1:2, row.side = "top", linewidth = 2) %>%
+    tab_add_hline(at.row = nrow(mortality_codes_table) + 1, 
+                  row.side = "bottom", linewidth = 3, linetype = 1)
+  
+p <- p1 | p2 | p3 | (t1 / t2) 
+
+
+ggsave(here::here("out","summarize-mortality.pdf"), p,
+       width = 12, height = 8)
+
+
+
 gps <- fread(here::here("analysis", gps_files$file_name)) %>%
   mutate(acquisition_time = as.POSIXct(acquisition_time))
 
-# filter to animals with GPS data
-animals <- animals %>%
-  filter(animals_id_unique %in% gps$animals_id_unique)
+
+
+
 
 # animals with known death date
 animals_dead_withdate <- animals %>%
