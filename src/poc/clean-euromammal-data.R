@@ -11,7 +11,7 @@ library(geosphere)
 print("reading in animal metadata...")
 
 print("...lynx")
-animals_lynx <- fread(here::here("data","lynx_animals.csv")) %>%
+animals_lynx <- fread(here::here("data", "euromammal-data","lynx_animals.csv")) %>%
   mutate(mortality_code_new = rep(NA, n())) %>%
   mutate(mortality_code_new = case_when(mortality_code == "0" ~ "0",
                                         mortality_code == "1" ~ "11",
@@ -43,16 +43,16 @@ animals_lynx <- fread(here::here("data","lynx_animals.csv")) %>%
                                         mortality_code == "40" ~ "35"))
 
 print("...red deer")
-animals_red_deer <- fread(here::here("data","reddeer_animals.csv"))
+animals_red_deer <- fread(here::here("data","euromammal-data","reddeer_animals.csv"))
 
 print("...roe deer")
-animals_roe_deer <- fread(here::here("data","roe_animals.csv"))
+animals_roe_deer <- fread(here::here("data","euromammal-data","roe_animals.csv"))
 
 print("...slovenian roe deer")
-animals_roe_deer_slovenia <- fread(here::here("data","Jelovica_Slovenia_ROEDEER_data","Animals_Jelovica_Slovenia.txt"))
+animals_roe_deer_slovenia <- fread(here::here("data","euromammal-data", "Jelovica_Slovenia_ROEDEER_data","Animals_Jelovica_Slovenia.txt"))
 
 print("...wild boar")
-animals_wild_boar <- fread(here::here("data","wildboar_animals.csv")) %>%
+animals_wild_boar <- fread(here::here("data","euromammal-data","wildboar_animals.csv")) %>%
   mutate(mortality_code_new = rep(NA, n())) %>%
   mutate(mortality_code_new = case_when(mortality_code == "0" ~ "0",
                                         mortality_code == "1" ~ "61",
@@ -78,7 +78,7 @@ animals_wild_boar <- fread(here::here("data","wildboar_animals.csv")) %>%
                                         mortality_code == "26" ~ "6106"))
 
 print("...wild cat")
-animals_wildcat <- fread(here::here("data","wildcat_animals.csv")) %>%
+animals_wildcat <- fread(here::here("data","euromammal-data","wildcat_animals.csv")) %>%
   mutate(mortality_code_new = rep(NA, n())) %>%
   mutate(mortality_code_new = case_when(mortality_code == "0" ~ "0",
                                         mortality_code != "0" ~ "9"))
@@ -88,26 +88,26 @@ animals_wildcat <- fread(here::here("data","wildcat_animals.csv")) %>%
 print("reading in GPS data...")
 
 print("...lynx")
-gps_lynx <- fread(here::here("data","lynx_gps.csv")) 
+gps_lynx <- fread(here::here("data","euromammal-data","lynx_gps.csv")) 
 
 print("...red deer")
-gps_red_deer <- fread(here::here("data","reddeer_gps.csv")) 
+gps_red_deer <- fread(here::here("data","euromammal-data","reddeer_gps.csv")) 
 
 print("...roe deer")
-gps_roe_deer <- fread(here::here("data","roe_gps.csv"))
+gps_roe_deer <- fread(here::here("data","euromammal-data","roe_gps.csv"))
 
 print("...slovenian roe deer")
 suppressWarnings(
-gps_roe_deer_slovenia <- fread(here::here("data","Jelovica_Slovenia_ROEDEER_data","GPS_Jelovica_Slovenia.txt")) %>%
+gps_roe_deer_slovenia <- fread(here::here("data","euromammal-data", "Jelovica_Slovenia_ROEDEER_data","GPS_Jelovica_Slovenia.txt")) %>%
   mutate(latitude = as.numeric(latitude),
          longitude = as.numeric(longitude))
 )
 
 print("...wild boar")
-gps_wild_boar <- fread(here::here("data","wildboar_gps.csv")) 
+gps_wild_boar <- fread(here::here("data","euromammal-data","wildboar_gps.csv")) 
 
 print("...wild cat")
-gps_wildcat <- fread(here::here("data","wildcat_gps.csv")) 
+gps_wildcat <- fread(here::here("data","euromammal-data","wildcat_gps.csv")) 
 
 ### species info ###
 # - scientific name
