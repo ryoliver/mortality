@@ -59,3 +59,7 @@ print("write out data...")
 
 output_filename <- paste0(str_sub(gps_file, start = 1, end = -5),"_annotated.csv")
 write_csv(x = gps_annotated, file = here("analysis", "data_annotated", output_filename))
+
+print(paste(output_filename, "written out to", here("analysis", "data_annotated")))
+
+print("complete!")
