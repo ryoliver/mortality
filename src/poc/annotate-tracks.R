@@ -1,7 +1,6 @@
 library(tidyverse)
 library(here)
 library(lubridate)
-library(ARTofR)
 library(sf)
 library(terra)
 
@@ -14,25 +13,37 @@ list.files(here("src", "funs","auto"), full.names = TRUE) %>%
 
 #..........................read in data..........................
 
-# animals metadata
-animals_file <- select_file(here("analysis"), "animals")
-animals <- read_csv(here("analysis", animals_file))
-
 # gps data
-gps_file <- select_file(here("analysis"), "gps")
-gps <- read_csv(here("analysis", gps_file))
+gps_file <- select_file(here("analysis", "data_cleaned"), "gps")
+gps <- read_csv(here("analysis", "data_cleaned", gps_file))
 
 # global human modification
 ghm <- terra::rast(here("data", "gHM.tif"))
 
-#........................annotate tracks.........................
+#..................prep GPS data for annotation..................
 
+# convert to sf object
 gps_sf <- st_as_sf(gps, coords = c("longitude", "latitude"), crs = 4326) 
 
-gps_test_sf <- gps_sf[1:1000000,] %>%
-  st_transform(crs = crs(ghm))
+# transform CRS to match GHM
+gps_sf <- st_transform(gps_sf, crs = crs(ghm))
 
-gps_test <- vect(gps_test_sf) 
+# convert to terra::SpatVector to use extract()
+gps_spatvect <- vect(gps_sf) 
 
-gps_test_extract <- terra::extract(y = gps_test, x = ghm)
+#........................annotate tracks.........................
 
+# annotate GPS data with GHM layer
+gps_annotated_ghm <- terra::extract(y = gps_spatvect, x = ghm)
+
+#........................clean up output.........................
+
+# bind annotations to original GPS data frame
+gps_annotated <- cbind(gps, gps_annotated_ghm) %>%
+  rename(ghm = gHM) %>%
+  select(-ID)
+
+#.........................write out data.........................
+
+output_filename <- paste0(str_sub(gps_file, start = 1, end = -5),"_annotated.csv")
+write_csv(x = gps_annotated, file = here("analysis", "data_annotated", output_filename))
