@@ -70,11 +70,15 @@ species_gam <- function(species) {
   
   species_common_name <- animals_species[1,]$common_name
   
+  print(species_common_name)
+  print("running model...")
+  
   m <- bam(scale(ghm) ~ dead +
              s(doy, by = dead, bs = "cc") +
              s(animals_id_unique, bs = "re"), 
            data = data_species)
   
+  print("plotting output...")
   p <- tidymv::plot_smooths(m, doy, dead) +
     scale_fill_manual(values = c("#FA9500", "#3685B5"), name = NULL, labels = c("Alive", "Dead")) +
     scale_color_manual(values = c("#FA9500", "#3685B5"), name = NULL, labels = c("Alive", "Dead")) +
