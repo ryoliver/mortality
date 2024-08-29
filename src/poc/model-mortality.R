@@ -2,6 +2,7 @@ library(tidyverse)
 library(here)
 library(lubridate)
 library(stringr)
+library(patchwork)
 library(mgcv)
 library(tidymv)
 
@@ -104,7 +105,10 @@ p_roe_deer <- species_gam("Capreolus capreolus")
 p_wild_boar <- species_gam("Sus scrofa")
 p_wildcat <- species_gam("Felis silvestris")
 
+p <- (p_red_deer + p_roe_deer)/(p_lynx + p_wildcat)/(p_wild_boar + plot_spacer())
 
+ggsave(file = here("out","gam_summary.png"), p,
+       height = 8, width = 8)
 
 #bam(ghm ~ dead + s(doy, bs = "cc") + s(day_from_death, by = dead), data = data_species)
 
